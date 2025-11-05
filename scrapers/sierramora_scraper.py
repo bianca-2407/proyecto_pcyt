@@ -6,30 +6,29 @@ from bs4 import BeautifulSoup
 import json
 import time
 
-
 def is_valid_image(url: str) -> bool:
-    """Filtra solo las imágenes grandes del producto, no íconos o etiquetas."""
+    """Filtra imágenes de producto válidas (no íconos, ni placeholders)."""
     if not url:
         return False
     if "fcdn.app/imgs" not in url:
         return False
-    if any(bad in url.lower() for bad in ["icon", "icons", "sticker", "new", "tag", "label"]):
+    if any(bad in url.lower() for bad in ["icon", "logo", "cocarda", "tag", "label", "preventa"]):
         return False
-    if any(size in url for size in ["/800x1200/", "/400x600/", "/1200x1800/"]):
+    if any(size in url for size in ["/600x900/", "/800x1200/", "/1200x1800/"]):
         return True
     return False
 
 
-def scrape_rotunda():
-    """Scrapea todos los productos de Rotunda y guarda el JSON final."""
+def scrape_sierramora():
+    """Scrapea todos los productos de Sierra Mora y guarda el JSON final."""
     options = Options()
-    options.add_argument("--headless=new")  # quitalo si querés ver el scroll
+    options.add_argument("--headless=new")  # quítalo si querés ver el navegador
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--window-size=1920,3000")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    driver.get("https://www.rotundastore.com/clothes")
+    driver.get("https://www.sierramorashop.com/shop")
 
     # --- Scroll dinámico hasta el final ---
     last_height = 0
@@ -52,10 +51,10 @@ def scrape_rotunda():
     soup = BeautifulSoup(html, "html.parser")
     productos = []
 
-    for item in soup.select("div.it"):
+    for item in soup.select("div.cnt"):
         nombre_tag = item.select_one("div.info a.tit h2")
         precio_tag = item.select_one("div.info strong.precio span.monto")
-        link_tag = item.select_one("div.info a.tit")
+        link_tag = item.select_one("a.img")
 
         if not (nombre_tag and precio_tag and link_tag):
             continue
@@ -64,10 +63,10 @@ def scrape_rotunda():
         precio = precio_tag.get_text(strip=True)
         link = link_tag["href"]
         if not link.startswith("http"):
-            link = "https://www.rotundastore.com" + link
+            link = "https://www.sierramorashop.com" + link
 
-        # --- Buscar imagen de portada válida ---
-        img_tags = item.select("img")
+        # --- Buscar imágenes (usa la primera válida) ---
+        img_tags = item.select("a.img img")
         img_url = None
         for img in img_tags:
             src = img.get("src", "")
@@ -82,11 +81,11 @@ def scrape_rotunda():
             "precio": precio,
             "link": link,
             "imagen": img_url,
-            "marca": "Rotunda"
+            "marca": "Sierra Mora"
         })
 
     # --- Guardar productos en archivo final ---
-    output_path = "productos_rotunda.json"
+    output_path = "productos_sierramora.json"
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(productos, f, ensure_ascii=False, indent=2)
 
@@ -95,7 +94,15 @@ def scrape_rotunda():
 
 
 if __name__ == "__main__":
-    scrape_rotunda()
+    scrape_sierramora()
+
+
+
+
+
+
+
+
 
 
 
